@@ -1,5 +1,6 @@
-import { useRef, useState } from "react";
-import Link from "next/link";
+import { useRef, useState, useEffect } from "react";
+import Header from "../components/Header.js";
+import { useAuth } from "../components/AuthProvider.js";
 import { useRouter } from "next/router";
 
 const CONFIDENCE_THRESHOLD = 0.6;
@@ -39,7 +40,7 @@ function compressImage(file, maxDimension = 1280, quality = 0.7) {
         quality
       );
     };
-    img.onerror = reject;
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("Could not read the photo. Try a JPEG or PNG.")); };
     img.src = objectUrl;
   });
 }
@@ -82,6 +83,10 @@ function ConfidenceBadge({ score }) {
 
 export default function Intake() {
   const router = useRouter();
+  const { apiFetch } = useAuth();
+  const [reviewed, setReviewed] = useState(false);
+  const [warnings, setWarnings] = useState([]);
+  const [usage, setUsage] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [recording, setRecording] = useState(false);
@@ -97,11 +102,20 @@ export default function Intake() {
     fee: "",
     faultDescription: "",
     customerPhone: "",
+    diagnosis: "",
+    workDone: "",
   });
   const [confidence, setConfidence] = useState({});
 
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
+  useEffect(() => () => { if (photoPreview) URL.revokeObjectURL(photoPreview); }, [photoPreview]);
+  useEffect(() => () => { if (audioUrl) URL.revokeObjectURL(audioUrl); }, [audioUrl]);
+  useEffect(() => () => {
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+    recorder?.stream.getTracks().forEach(track => track.stop());
+  }, []);
 
   const onPhotoChange = (e) => {
     const file = e.target.files?.[0];
@@ -111,6 +125,8 @@ export default function Intake() {
   };
 
   const startRecording = async () => {
+    try {
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') throw new Error('Recording is unavailable. Use a supported browser on localhost or HTTPS, or enter details manually.');
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     // 32kbps is plenty for a short spoken voice note and keeps the file
     // small enough to stay well under Vercel's serverless request body limit.
@@ -118,7 +134,7 @@ export default function Intake() {
     chunksRef.current = [];
     recorder.ondataavailable = (e) => chunksRef.current.push(e.data);
     recorder.onstop = () => {
-      const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+      const blob = new Blob(chunksRef.current, { type: recorder.mimeType });
       setAudioBlob(blob);
       setAudioUrl(URL.createObjectURL(blob));
       stream.getTracks().forEach((t) => t.stop());
@@ -126,6 +142,8 @@ export default function Intake() {
     recorder.start();
     mediaRecorderRef.current = recorder;
     setRecording(true);
+    setTimeout(() => { if (recorder.state === "recording") { recorder.stop(); setRecording(false); } }, 60000);
+    } catch(err) { setExtractError(err.message); }
   };
 
   const stopRecording = () => {
@@ -148,10 +166,11 @@ export default function Intake() {
       }
       if (audioBlob) {
         payload.audioBase64 = await blobToBase64(audioBlob);
-        payload.audioMimeType = "audio/webm";
+        payload.audioMimeType = audioBlob.type.split(";")[0];
       }
 
-      const res = await fetch("/api/extract", {
+      if (JSON.stringify(payload).length > 3800000) throw new Error("Media is too large. Use a smaller photo or a shorter recording.");
+      const res = await apiFetch("/api/extract", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -163,10 +182,13 @@ export default function Intake() {
         ...prev,
         customerName: data.customerName || "",
         deviceModel: data.deviceModel || "",
-        fee: data.fee || "",
+        fee: data.fee ?? "",
         faultDescription: data.faultDescription || "",
       }));
       setConfidence(data.confidence || {});
+      setWarnings(data.warnings || []);
+      setUsage(data.usage || null);
+      setReviewed(false);
     } catch (err) {
       setExtractError(err.message);
     } finally {
@@ -176,16 +198,17 @@ export default function Intake() {
 
   const updateField = (name, value) => {
     setFields((prev) => ({ ...prev, [name]: value }));
+    setReviewed(false);
   };
 
   const submitJob = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const res = await fetch("/api/jobs", {
+      const res = await apiFetch("/api/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(fields),
+        body: JSON.stringify({ ...fields, fee: fields.fee === "" ? null : Number(fields.fee), reviewed }),
       });
       const data = await safeJson(res);
       if (!res.ok) throw new Error(data.error || "Could not save job.");
@@ -200,18 +223,11 @@ export default function Intake() {
 
   return (
     <div className="page">
-      <div className="masthead">
-        <div>
-          <h1>New job</h1>
-          <div className="sub">Staff Workspace · AI-assisted repair intake</div>
-        </div>
-        <nav>
-          <Link href="/">Dashboard</Link>
-          <Link href="/intake">+ New job</Link>
-        </nav>
-      </div>
+      <Header />
+      <div className="page-heading"><div><div className="eyebrow">NEW REPAIR / STAFF INTAKE</div><h1>A good repair starts here.</h1><p className="muted">Capture a photo and voice note, or enter the details manually.</p></div></div>
+      <div className="intake-layout">
+      <section className="intake-panel"><div className="eyebrow">01 / OPTIONAL ASSISTANCE</div><h2>Let AI prepare the first draft.</h2>
 
-      <div className="form">
         <div className="field">
           <label>Photo of device</label>
           <label className="photo-drop">
@@ -247,19 +263,23 @@ export default function Intake() {
           </div>
         </div>
 
-        <button type="button" className="btn" onClick={runExtraction} disabled={extracting}>
+        <button type="button" className="btn" onClick={runExtraction} disabled={extracting || recording}>
           {extracting ? "Listening & reading…" : "Extract job details"}
         </button>
 
-        {extractError && <p className="status-line error">{extractError}</p>}
+        {extractError && <p className="status-line error" role="alert">{extractError}</p>}
 
-        <hr style={{ margin: "24px 0", border: "none", borderTop: "1px solid var(--line)" }} />
+        {warnings.map((warning,i) => <p className="status-line" key={i}>{warning}</p>)}
+        {usage && <p className="status-line">Model: {usage.model} · Estimated USD: {usage.estimatedCostUsd ?? 'not configured'}</p>}
+        <p className="muted">Media is sent to Gemini for extraction. Only reviewed job details and usage metadata are stored. Use fictional customer information.</p>
+        </section><section className="intake-panel"><div className="eyebrow">02 / STAFF REVIEW</div><h2>Confirm the repair details.</h2>
 
         <form onSubmit={submitJob}>
           <div className="field">
-            <label>Customer name</label>
+            <label htmlFor="customerName">Customer name</label>
             <input
               type="text"
+              id="customerName" maxLength={100}
               value={fields.customerName}
               onChange={(e) => updateField("customerName", e.target.value)}
               required
@@ -270,9 +290,10 @@ export default function Intake() {
           </div>
 
           <div className="field">
-            <label>Device model</label>
+            <label htmlFor="deviceModel">Device model</label>
             <input
               type="text"
+              id="deviceModel" maxLength={120}
               value={fields.deviceModel}
               onChange={(e) => updateField("deviceModel", e.target.value)}
               required
@@ -283,9 +304,10 @@ export default function Intake() {
           </div>
 
           <div className="field">
-            <label>Fee (ZAR)</label>
+            <label htmlFor="fee">Fee (ZAR, leave blank if unknown)</label>
             <input
-              type="number"
+              type="number" min="0" max="1000000" step="0.01"
+              id="fee"
               value={fields.fee}
               onChange={(e) => updateField("fee", e.target.value)}
             />
@@ -295,18 +317,19 @@ export default function Intake() {
           </div>
 
           <div className="field">
-            <label>Fault description</label>
+            <label htmlFor="fault">Fault description</label>
             <textarea
+              id="fault" required maxLength={1000}
               value={fields.faultDescription}
               onChange={(e) => updateField("faultDescription", e.target.value)}
             />
           </div>
 
           <div className="field">
-            <label>Customer WhatsApp number (typed by owner — not extracted)</label>
+            <label htmlFor="phone">Customer WhatsApp number (optional, entered by staff)</label>
             <input
               type="text"
-              placeholder="e.g. 082 123 4567"
+              id="phone" maxLength={24} placeholder="e.g. 0821234567 or +27821234567"
               value={fields.customerPhone}
               onChange={(e) => updateField("customerPhone", e.target.value)}
             />
@@ -318,11 +341,12 @@ export default function Intake() {
             </p>
           )}
 
-          <button className="btn" type="submit" disabled={submitting}>
+          <label className="review-check"><input type="checkbox" checked={reviewed} onChange={e => setReviewed(e.target.checked)} required /><span>I have checked the customer, device, fault and fee against the source information.</span></label>
+          <button className="btn" type="submit" disabled={submitting || !reviewed}>
             {submitting ? "Saving…" : "Save job to board"}
           </button>
         </form>
-      </div>
+      </section></div>
     </div>
   );
 }
