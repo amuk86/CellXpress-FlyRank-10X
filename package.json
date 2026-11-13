@@ -6,12 +6,23 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "emulators": "firebase emulators:start --project demo-cellxpress --only auth,firestore --import=.emulator-data --export-on-exit=.emulator-data",
+    "seed": "node scripts/seed-demo.js",
+    "seed:clean": "node scripts/seed-demo.js --clean",
+    "staff:grant": "node scripts/set-staff.js",
+    "test:e2e": "playwright test",
+    "test:integration": "node --test tests/integration/*.test.js",
+    "format": "prettier --write components lib pages scripts styles tests *.js *.json *.md docs/*.md",
+    "format:check": "prettier --check components lib pages scripts styles tests *.js *.json *.md docs/*.md",
+    "usage": "node scripts/inspect-usage.js"
   },
   "overrides": {
-    "uuid": "^11.1.1"
+    "uuid": "^11.1.1",
+    "@grpc/grpc-js": "^1.14.7"
   },
   "dependencies": {
+    "@next/env": "^16.4.6",
     "firebase": "^13.3.0",
     "firebase-admin": "14.5.1",
     "next": "16.4.6",
@@ -21,6 +32,8 @@
   },
   "type": "module",
   "devDependencies": {
-    "@playwright/test": "^1.65.0"
+    "@playwright/test": "^1.65.0",
+    "firebase-tools": "^15.36.0",
+    "prettier": "^3.6.2"
   }
 }

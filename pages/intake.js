@@ -37,10 +37,13 @@ function compressImage(file, maxDimension = 1280, quality = 0.7) {
           reader.readAsDataURL(blob);
         },
         "image/jpeg",
-        quality
+        quality,
       );
     };
-    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("Could not read the photo. Try a JPEG or PNG.")); };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Could not read the photo. Try a JPEG or PNG."));
+    };
     img.src = objectUrl;
   });
 }
@@ -65,11 +68,11 @@ async function safeJson(res) {
   } catch {
     if (res.status === 413 || /request entity too large/i.test(text)) {
       throw new Error(
-        "That photo/voice note is too large for the server to accept. Try a shorter recording or a smaller photo."
+        "That photo/voice note is too large for the server to accept. Try a shorter recording or a smaller photo.",
       );
     }
     throw new Error(
-      `Server returned an unexpected response (status ${res.status}). Check the Vercel function logs for details.`
+      `Server returned an unexpected response (status ${res.status}). Check the Vercel function logs for details.`,
     );
   }
 }
@@ -109,13 +112,29 @@ export default function Intake() {
 
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
-  useEffect(() => () => { if (photoPreview) URL.revokeObjectURL(photoPreview); }, [photoPreview]);
-  useEffect(() => () => { if (audioUrl) URL.revokeObjectURL(audioUrl); }, [audioUrl]);
-  useEffect(() => () => {
-    const recorder = mediaRecorderRef.current;
-    if (recorder && recorder.state !== 'inactive') recorder.stop();
-    recorder?.stream.getTracks().forEach(track => track.stop());
-  }, []);
+  const recordingTimerRef = useRef(null);
+  useEffect(
+    () => () => {
+      if (photoPreview) URL.revokeObjectURL(photoPreview);
+    },
+    [photoPreview],
+  );
+  useEffect(
+    () => () => {
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
+    },
+    [audioUrl],
+  );
+  useEffect(
+    () => () => {
+      clearTimeout(recordingTimerRef.current);
+      const recorder = mediaRecorderRef.current;
+      if (recorder) recorder.onstop = null;
+      if (recorder && recorder.state !== "inactive") recorder.stop();
+      recorder?.stream.getTracks().forEach((track) => track.stop());
+    },
+    [],
+  );
 
   const onPhotoChange = (e) => {
     const file = e.target.files?.[0];
@@ -125,25 +144,39 @@ export default function Intake() {
   };
 
   const startRecording = async () => {
+    let stream;
     try {
-    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') throw new Error('Recording is unavailable. Use a supported browser on localhost or HTTPS, or enter details manually.');
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    // 32kbps is plenty for a short spoken voice note and keeps the file
-    // small enough to stay well under Vercel's serverless request body limit.
-    const recorder = new MediaRecorder(stream, { audioBitsPerSecond: 32000 });
-    chunksRef.current = [];
-    recorder.ondataavailable = (e) => chunksRef.current.push(e.data);
-    recorder.onstop = () => {
-      const blob = new Blob(chunksRef.current, { type: recorder.mimeType });
-      setAudioBlob(blob);
-      setAudioUrl(URL.createObjectURL(blob));
-      stream.getTracks().forEach((t) => t.stop());
-    };
-    recorder.start();
-    mediaRecorderRef.current = recorder;
-    setRecording(true);
-    setTimeout(() => { if (recorder.state === "recording") { recorder.stop(); setRecording(false); } }, 60000);
-    } catch(err) { setExtractError(err.message); }
+      if (
+        !navigator.mediaDevices?.getUserMedia ||
+        typeof MediaRecorder === "undefined"
+      )
+        throw new Error(
+          "Recording is unavailable. Use a supported browser on localhost or HTTPS, or enter details manually.",
+        );
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // 32kbps is plenty for a short spoken voice note and keeps the file
+      // small enough to stay well under Vercel's serverless request body limit.
+      const recorder = new MediaRecorder(stream, { audioBitsPerSecond: 32000 });
+      chunksRef.current = [];
+      recorder.ondataavailable = (e) => chunksRef.current.push(e.data);
+      recorder.onstop = () => {
+        clearTimeout(recordingTimerRef.current);
+        setRecording(false);
+        const blob = new Blob(chunksRef.current, { type: recorder.mimeType });
+        setAudioBlob(blob);
+        setAudioUrl(URL.createObjectURL(blob));
+        stream.getTracks().forEach((t) => t.stop());
+      };
+      recorder.start();
+      mediaRecorderRef.current = recorder;
+      setRecording(true);
+      recordingTimerRef.current = setTimeout(() => {
+        if (recorder.state === "recording") recorder.stop();
+      }, 60000);
+    } catch (err) {
+      stream?.getTracks().forEach((track) => track.stop());
+      setExtractError(err.message);
+    }
   };
 
   const stopRecording = () => {
@@ -157,6 +190,7 @@ export default function Intake() {
       return;
     }
     setExtracting(true);
+    setReviewed(false);
     setExtractError("");
     try {
       const payload = {};
@@ -169,7 +203,10 @@ export default function Intake() {
         payload.audioMimeType = audioBlob.type.split(";")[0];
       }
 
-      if (JSON.stringify(payload).length > 3800000) throw new Error("Media is too large. Use a smaller photo or a shorter recording.");
+      if (JSON.stringify(payload).length > 3800000)
+        throw new Error(
+          "Media is too large. Use a smaller photo or a shorter recording.",
+        );
       const res = await apiFetch("/api/extract", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -208,7 +245,11 @@ export default function Intake() {
       const res = await apiFetch("/api/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...fields, fee: fields.fee === "" ? null : Number(fields.fee), reviewed }),
+        body: JSON.stringify({
+          ...fields,
+          fee: fields.fee === "" ? null : Number(fields.fee),
+          reviewed,
+        }),
       });
       const data = await safeJson(res);
       if (!res.ok) throw new Error(data.error || "Could not save job.");
@@ -219,134 +260,211 @@ export default function Intake() {
     }
   };
 
-  const hasLowConfidence = Object.values(confidence).some((v) => v < CONFIDENCE_THRESHOLD);
+  const hasLowConfidence = Object.values(confidence).some(
+    (v) => v < CONFIDENCE_THRESHOLD,
+  );
 
   return (
     <div className="page">
       <Header />
-      <div className="page-heading"><div><div className="eyebrow">NEW REPAIR / STAFF INTAKE</div><h1>A good repair starts here.</h1><p className="muted">Capture a photo and voice note, or enter the details manually.</p></div></div>
+      <div className="page-heading">
+        <div>
+          <div className="eyebrow">NEW REPAIR / STAFF INTAKE</div>
+          <h1>A good repair starts here.</h1>
+          <p className="muted">
+            Capture a photo and voice note, or enter the details manually.
+          </p>
+        </div>
+      </div>
       <div className="intake-layout">
-      <section className="intake-panel"><div className="eyebrow">01 / OPTIONAL ASSISTANCE</div><h2>Let AI prepare the first draft.</h2>
+        <section className="intake-panel">
+          <div className="eyebrow">01 / OPTIONAL ASSISTANCE</div>
+          <h2>Let AI prepare the first draft.</h2>
 
-        <div className="field">
-          <label>Photo of device</label>
-          <label className="photo-drop">
-            {photoPreview ? (
-              <img className="photo-preview" src={photoPreview} alt="Device preview" />
-            ) : (
-              "Tap to take or choose a photo"
-            )}
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={onPhotoChange}
-              style={{ display: "none" }}
-            />
-          </label>
-        </div>
-
-        <div className="field">
-          <label>Voice note (name, device, fee)</label>
-          <div className="record-row">
-            {!recording ? (
-              <button type="button" className="btn" onClick={startRecording}>
-                ● Record
-              </button>
-            ) : (
-              <button type="button" className="btn secondary" onClick={stopRecording}>
-                <span className="record-dot" style={{ display: "inline-block", marginRight: 6 }} />
-                Stop
-              </button>
-            )}
-            {audioUrl && <audio controls src={audioUrl} />}
-          </div>
-        </div>
-
-        <button type="button" className="btn" onClick={runExtraction} disabled={extracting || recording}>
-          {extracting ? "Listening & reading…" : "Extract job details"}
-        </button>
-
-        {extractError && <p className="status-line error" role="alert">{extractError}</p>}
-
-        {warnings.map((warning,i) => <p className="status-line" key={i}>{warning}</p>)}
-        {usage && <p className="status-line">Model: {usage.model} · Estimated USD: {usage.estimatedCostUsd ?? 'not configured'}</p>}
-        <p className="muted">Media is sent to Gemini for extraction. Only reviewed job details and usage metadata are stored. Use fictional customer information.</p>
-        </section><section className="intake-panel"><div className="eyebrow">02 / STAFF REVIEW</div><h2>Confirm the repair details.</h2>
-
-        <form onSubmit={submitJob}>
           <div className="field">
-            <label htmlFor="customerName">Customer name</label>
-            <input
-              type="text"
-              id="customerName" maxLength={100}
-              value={fields.customerName}
-              onChange={(e) => updateField("customerName", e.target.value)}
-              required
-            />
-            <div className="confidence-row">
-              <ConfidenceBadge score={confidence.customerName} />
+            <label>Photo of device</label>
+            <label className="photo-drop">
+              {photoPreview ? (
+                <img
+                  className="photo-preview"
+                  src={photoPreview}
+                  alt="Device preview"
+                />
+              ) : (
+                "Tap to take or choose a photo"
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={onPhotoChange}
+                style={{ display: "none" }}
+              />
+            </label>
+          </div>
+
+          <div className="field">
+            <label>Voice note (name, device, fee)</label>
+            <div className="record-row">
+              {!recording ? (
+                <button type="button" className="btn" onClick={startRecording}>
+                  ● Record
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn secondary"
+                  onClick={stopRecording}
+                >
+                  <span
+                    className="record-dot"
+                    style={{ display: "inline-block", marginRight: 6 }}
+                  />
+                  Stop
+                </button>
+              )}
+              {audioUrl && <audio controls src={audioUrl} />}
             </div>
           </div>
 
-          <div className="field">
-            <label htmlFor="deviceModel">Device model</label>
-            <input
-              type="text"
-              id="deviceModel" maxLength={120}
-              value={fields.deviceModel}
-              onChange={(e) => updateField("deviceModel", e.target.value)}
-              required
-            />
-            <div className="confidence-row">
-              <ConfidenceBadge score={confidence.deviceModel} />
-            </div>
-          </div>
+          <button
+            type="button"
+            className="btn"
+            onClick={runExtraction}
+            disabled={extracting || recording}
+          >
+            {extracting ? "Listening & reading…" : "Extract job details"}
+          </button>
 
-          <div className="field">
-            <label htmlFor="fee">Fee (ZAR, leave blank if unknown)</label>
-            <input
-              type="number" min="0" max="1000000" step="0.01"
-              id="fee"
-              value={fields.fee}
-              onChange={(e) => updateField("fee", e.target.value)}
-            />
-            <div className="confidence-row">
-              <ConfidenceBadge score={confidence.fee} />
-            </div>
-          </div>
-
-          <div className="field">
-            <label htmlFor="fault">Fault description</label>
-            <textarea
-              id="fault" required maxLength={1000}
-              value={fields.faultDescription}
-              onChange={(e) => updateField("faultDescription", e.target.value)}
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor="phone">Customer WhatsApp number (optional, entered by staff)</label>
-            <input
-              type="text"
-              id="phone" maxLength={24} placeholder="e.g. 0821234567 or +27821234567"
-              value={fields.customerPhone}
-              onChange={(e) => updateField("customerPhone", e.target.value)}
-            />
-          </div>
-
-          {hasLowConfidence && (
-            <p className="status-line error">
-              One or more fields were low-confidence — please check them before saving.
+          {extractError && (
+            <p className="status-line error" role="alert">
+              {extractError}
             </p>
           )}
 
-          <label className="review-check"><input type="checkbox" checked={reviewed} onChange={e => setReviewed(e.target.checked)} required /><span>I have checked the customer, device, fault and fee against the source information.</span></label>
-          <button className="btn" type="submit" disabled={submitting || !reviewed}>
-            {submitting ? "Saving…" : "Save job to board"}
-          </button>
-        </form>
-      </section></div>
+          {warnings.map((warning, i) => (
+            <p className="status-line" key={i}>
+              {warning}
+            </p>
+          ))}
+          {usage && (
+            <p className="status-line">
+              Model: {usage.model} · Estimated USD:{" "}
+              {usage.estimatedCostUsd ?? "not configured"}
+            </p>
+          )}
+          <p className="muted">
+            Media is sent to Gemini for extraction. Only reviewed job details
+            and usage metadata are stored. Use fictional customer information.
+          </p>
+        </section>
+        <section className="intake-panel">
+          <div className="eyebrow">02 / STAFF REVIEW</div>
+          <h2>Confirm the repair details.</h2>
+
+          <form onSubmit={submitJob}>
+            <div className="field">
+              <label htmlFor="customerName">Customer name</label>
+              <input
+                type="text"
+                id="customerName"
+                maxLength={100}
+                value={fields.customerName}
+                onChange={(e) => updateField("customerName", e.target.value)}
+                required
+              />
+              <div className="confidence-row">
+                <ConfidenceBadge score={confidence.customerName} />
+              </div>
+            </div>
+
+            <div className="field">
+              <label htmlFor="deviceModel">Device model</label>
+              <input
+                type="text"
+                id="deviceModel"
+                maxLength={120}
+                value={fields.deviceModel}
+                onChange={(e) => updateField("deviceModel", e.target.value)}
+                required
+              />
+              <div className="confidence-row">
+                <ConfidenceBadge score={confidence.deviceModel} />
+              </div>
+            </div>
+
+            <div className="field">
+              <label htmlFor="fee">Fee (ZAR, leave blank if unknown)</label>
+              <input
+                type="number"
+                min="0"
+                max="1000000"
+                step="0.01"
+                id="fee"
+                value={fields.fee}
+                onChange={(e) => updateField("fee", e.target.value)}
+              />
+              <div className="confidence-row">
+                <ConfidenceBadge score={confidence.fee} />
+              </div>
+            </div>
+
+            <div className="field">
+              <label htmlFor="fault">Fault description</label>
+              <textarea
+                id="fault"
+                required
+                maxLength={1000}
+                value={fields.faultDescription}
+                onChange={(e) =>
+                  updateField("faultDescription", e.target.value)
+                }
+              />
+            </div>
+
+            <div className="field">
+              <label htmlFor="phone">
+                Customer WhatsApp number (optional, entered by staff)
+              </label>
+              <input
+                type="text"
+                id="phone"
+                maxLength={24}
+                placeholder="e.g. 0821234567 or +27821234567"
+                value={fields.customerPhone}
+                onChange={(e) => updateField("customerPhone", e.target.value)}
+              />
+            </div>
+
+            {hasLowConfidence && (
+              <p className="status-line error">
+                One or more fields were low-confidence — please check them
+                before saving.
+              </p>
+            )}
+
+            <label className="review-check">
+              <input
+                type="checkbox"
+                checked={reviewed}
+                onChange={(e) => setReviewed(e.target.checked)}
+                required
+              />
+              <span>
+                I have checked the customer, device, fault and fee against the
+                source information.
+              </span>
+            </label>
+            <button
+              className="btn"
+              type="submit"
+              disabled={submitting || !reviewed || extracting || recording}
+            >
+              {submitting ? "Saving…" : "Save job to board"}
+            </button>
+          </form>
+        </section>
+      </div>
     </div>
   );
 }
