@@ -10,13 +10,13 @@ CellXpress technicians and counter staff need a staff-only repair operations wor
 
 ## Five concepts and five product features
 
-| Backend concept | Implementation / product behavior |
-| --- | --- |
-| HTTP API endpoints | Validated intake, retrieval and safe lifecycle updates |
-| Database | Persistent repair jobs in Firebase Firestore |
-| Authentication | Firebase staff sign-in and server verification of authorized staff |
-| Reporting | Downloadable PDF reports derived only from stored job facts |
-| LLM integration | Gemini photo/voice extraction, schema checks and usage/cost metadata |
+| Backend concept    | Implementation / product behavior                                    |
+| ------------------ | -------------------------------------------------------------------- |
+| HTTP API endpoints | Validated intake, retrieval and safe lifecycle updates               |
+| Database           | Persistent repair jobs in Firebase Firestore                         |
+| Authentication     | Firebase staff sign-in and server verification of authorized staff   |
+| Reporting          | Downloadable PDF reports derived only from stored job facts          |
+| LLM integration    | Gemini photo/voice extraction, schema checks and usage/cost metadata |
 
 Product scope: staff login, AI-assisted intake, job dashboard/tracking, PDF reports, and prepared customer messages. Staff must review extracted facts before saving. Repair progress, payment and collection are recorded separately.
 
