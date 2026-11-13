@@ -1,3 +1,4 @@
+import AuthProvider from "../components/AuthProvider.js";
 import Head from "next/head";
 import "../styles/globals.css";
 
@@ -5,7 +6,7 @@ export default function App({ Component, pageProps }) {
   return (
     <>
       <Head>
-        <title>CellXpress — Job Board</title>
+        <title>CellXpress — Staff Workspace</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
@@ -13,7 +14,7 @@ export default function App({ Component, pageProps }) {
           rel="stylesheet"
         />
       </Head>
-      <Component {...pageProps} />
+      <AuthProvider><Component {...pageProps} /></AuthProvider>
     </>
   );
 }
