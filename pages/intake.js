@@ -203,7 +203,7 @@ export default function Intake() {
       <div className="masthead">
         <div>
           <h1>New job</h1>
-          <div className="sub">photo + voice note → structured ticket</div>
+          <div className="sub">Staff Workspace · AI-assisted repair intake</div>
         </div>
         <nav>
           <Link href="/">Dashboard</Link>

@@ -110,7 +110,7 @@ export default function Dashboard() {
       <div className="masthead">
         <div>
           <h1>CellXpress</h1>
-          <div className="sub">UWC Student Centre — job board</div>
+          <div className="sub">Staff Workspace · Repair Operations Dashboard</div>
         </div>
         <nav>
           <Link href="/">Dashboard</Link>
