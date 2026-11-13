@@ -1,5 +1,13 @@
-node_modules
-.next
-.env.local
-.vercel
+node_modules/
+.next/
+.env*
+!.env.local.example
+.vercel/
 *.log
+*service-account*.json
+*serviceAccount*.json
+firebase-debug*
+firestore-debug*
+.emulator-data/
+playwright-report/
+test-results/
