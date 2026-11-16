@@ -1,3 +1,7 @@
+import {
+  DEFAULT_DIAGNOSIS,
+  DEFAULT_FAULT_DESCRIPTION,
+} from "../lib/jobDefaults.js";
 import { useRef, useState, useEffect } from "react";
 import Header from "../components/Header.js";
 import { useAuth } from "../components/AuthProvider.js";
@@ -84,9 +88,9 @@ export default function Intake() {
     customerName: "",
     deviceModel: "",
     fee: "",
-    faultDescription: "",
+    faultDescription: DEFAULT_FAULT_DESCRIPTION,
     customerPhone: "",
-    diagnosis: "",
+    diagnosis: DEFAULT_DIAGNOSIS,
     workDone: "",
   });
   const [confidence, setConfidence] = useState({});
@@ -201,7 +205,7 @@ export default function Intake() {
         customerName: data.customerName || "",
         deviceModel: data.deviceModel || "",
         fee: data.fee ?? "",
-        faultDescription: data.faultDescription || "",
+        faultDescription: data.faultDescription || DEFAULT_FAULT_DESCRIPTION,
       }));
       setConfidence(data.confidence || {});
       setWarnings(data.warnings || []);
@@ -395,7 +399,7 @@ export default function Intake() {
               <label htmlFor="fault">Fault description</label>
               <textarea
                 id="fault"
-                required
+                placeholder={DEFAULT_FAULT_DESCRIPTION}
                 maxLength={1000}
                 value={fields.faultDescription}
                 onChange={(e) =>

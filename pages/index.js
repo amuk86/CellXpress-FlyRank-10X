@@ -1,3 +1,7 @@
+import {
+  DEFAULT_DIAGNOSIS,
+  DEFAULT_FAULT_DESCRIPTION,
+} from "../lib/jobDefaults.js";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import Header from "../components/Header.js";
@@ -25,8 +29,8 @@ function Ticket({ job, onUpdate, onReport, busy }) {
     customerName: job.customerName || "",
     customerPhone: job.customerPhone || "",
     deviceModel: job.deviceModel || "",
-    faultDescription: job.faultDescription || "",
-    diagnosis: job.diagnosis || "",
+    faultDescription: job.faultDescription || DEFAULT_FAULT_DESCRIPTION,
+    diagnosis: job.diagnosis || DEFAULT_DIAGNOSIS,
     workDone: job.workDone || "",
     fee: job.fee ?? "",
   });
@@ -100,7 +104,7 @@ function Ticket({ job, onUpdate, onReport, busy }) {
             <label>
               Fault description
               <textarea
-                required
+                placeholder={DEFAULT_FAULT_DESCRIPTION}
                 maxLength={1000}
                 value={draft.faultDescription}
                 onChange={(e) =>

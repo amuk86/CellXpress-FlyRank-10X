@@ -81,7 +81,7 @@ function response() {
 }
 test("intake requires review and required facts", () => {
   assert.throws(() => validateJob({ ...validJob, reviewed: false }));
-  for (const key of ["customerName", "deviceModel", "faultDescription"])
+  for (const key of ["customerName", "deviceModel"])
     assert.throws(() => validateJob({ ...validJob, [key]: " " }));
 });
 test("fees distinguish missing, free, negative, non-finite and coerced strings", () => {
@@ -126,7 +126,6 @@ test("job edits update customer, contact, device and fault with intake validatio
   for (const patch of [
     { customerName: " " },
     { deviceModel: "" },
-    { faultDescription: "" },
     { customerPhone: "123" },
     { customerName: 42 },
     { deviceModel: "x".repeat(121) },
@@ -469,4 +468,34 @@ test("API responses preserve JSON errors and explain HTML platform errors", asyn
     safeJson(new Response("Request too large", { status: 413 })),
     /too large/,
   );
+});
+
+test("unknown fault and diagnosis use defaults on creation and explicit edits", () => {
+  for (const value of [undefined, null, "", "   "]) {
+    const created = validateJob({
+      ...validJob,
+      faultDescription: value,
+      diagnosis: value,
+    });
+    assert.equal(created.faultDescription, "fault description not given");
+    assert.equal(created.diagnosis, "undiagnosed");
+    const updated = validateUpdate(
+      { faultDescription: value, diagnosis: value },
+      { status: "in_progress" },
+    );
+    assert.equal(updated.faultDescription, "fault description not given");
+    assert.equal(updated.diagnosis, "undiagnosed");
+  }
+  const unchanged = validateUpdate(
+    { fee: 100 },
+    { status: "in_progress", diagnosis: "Battery fault" },
+  );
+  assert.equal(unchanged.diagnosis, undefined);
+  assert.equal(unchanged.faultDescription, undefined);
+  for (const value of [123, {}, "x".repeat(2001)]) {
+    assert.throws(() => validateJob({ ...validJob, diagnosis: value }));
+    assert.throws(() =>
+      validateUpdate({ diagnosis: value }, { status: "in_progress" }),
+    );
+  }
 });
