@@ -11,28 +11,7 @@ export default function AuthProvider({ children }) {
   const [error, setError] = useState("");
   useEffect(() => {
     try {
-      return onIdTokenChanged(getClientAuth(), async (current) => {
-        if (current) {
-          try {
-            const token = await current.getIdTokenResult();
-            if (token.claims.staff !== true) {
-              await signOut(getClientAuth());
-              setError(
-                "This account is not authorized for the staff workspace.",
-              );
-              setUser(null);
-              setLoading(false);
-              return;
-            }
-          } catch {
-            setError(
-              "Could not verify your staff session. Please sign in again.",
-            );
-            setUser(null);
-            setLoading(false);
-            return;
-          }
-        }
+      return onIdTokenChanged(getClientAuth(), (current) => {
         setUser(current);
         setLoading(false);
       });

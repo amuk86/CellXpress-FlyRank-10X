@@ -355,7 +355,8 @@ export default function Intake() {
           )}
           <p className="muted">
             Media is sent to Gemini for extraction. Only reviewed job details
-            and usage metadata are stored. Use fictional customer information.
+            and usage metadata are stored. AI can make mistakes. Double-check all
+            extracted details before saving.
           </p>
         </section>
         <section className="intake-panel">

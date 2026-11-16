@@ -20,11 +20,16 @@ function Ticket({ job, onUpdate, onReport, busy }) {
     Date.now() - job.createdAt > URGENT_AFTER_MS;
   const wa = waLink(job);
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState({
+  const jobDraft = () => ({
+    customerName: job.customerName || "",
+    customerPhone: job.customerPhone || "",
+    deviceModel: job.deviceModel || "",
+    faultDescription: job.faultDescription || "",
     diagnosis: job.diagnosis || "",
     workDone: job.workDone || "",
     fee: job.fee ?? "",
   });
+  const [draft, setDraft] = useState(jobDraft);
   return (
     <article className={`ticket${urgent ? " urgent" : ""}`}>
       <div className="ticket-head">
@@ -58,6 +63,50 @@ function Ticket({ job, onUpdate, onReport, busy }) {
                 setEditing(false);
             }}
           >
+            <label>
+              Customer name
+              <input
+                required
+                maxLength={100}
+                value={draft.customerName}
+                onChange={(e) =>
+                  setDraft({ ...draft, customerName: e.target.value })
+                }
+              />
+            </label>
+            <label>
+              Customer phone
+              <input
+                type="tel"
+                maxLength={24}
+                value={draft.customerPhone}
+                onChange={(e) =>
+                  setDraft({ ...draft, customerPhone: e.target.value })
+                }
+              />
+            </label>
+            <label>
+              Device model
+              <input
+                required
+                maxLength={120}
+                value={draft.deviceModel}
+                onChange={(e) =>
+                  setDraft({ ...draft, deviceModel: e.target.value })
+                }
+              />
+            </label>
+            <label>
+              Fault description
+              <textarea
+                required
+                maxLength={1000}
+                value={draft.faultDescription}
+                onChange={(e) =>
+                  setDraft({ ...draft, faultDescription: e.target.value })
+                }
+              />
+            </label>
             <label>
               Diagnosis
               <textarea
@@ -137,7 +186,10 @@ function Ticket({ job, onUpdate, onReport, busy }) {
             <button
               className="text-btn"
               disabled={busy}
-              onClick={() => setEditing(!editing)}
+              onClick={() => {
+                setDraft(jobDraft());
+                setEditing(!editing);
+              }}
             >
               Edit details
             </button>

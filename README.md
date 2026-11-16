@@ -32,7 +32,7 @@ Manual intake and reports work without Gemini. Optional AI requires your own API
 1. Sign in and inspect the three dashboard columns and the over-48-hours flag.
 2. Select **Create repair job**. Enter a fictional name, device and fault. Enter a fee or leave it unknown. Optionally add a photo or record a voice note (up to one minute), then extract a draft.
 3. Check every AI value, missing-field warning and conflict against the source. Correct the form, check the staff review box, then save.
-4. On the dashboard, open **Edit details**, record diagnosis and work done, and save. **Mark ready** requires recorded work. Payment remains separate.
+4. On the dashboard, open **Edit details** to update customer name, phone, device, fault, diagnosis, work done or fee, and save. **Mark ready** requires recorded work. Payment remains separate.
 5. Download a PDF. Mark payment **Paid** (requires a recorded fee) or explicitly **Waived**, then mark the job **Collected**. Collection is read-only afterward.
 6. A ready job with an entered valid number offers **Review WhatsApp message**. It opens a prepared message; staff decide whether to send. Use fictional numbers only and do not send demo messages.
 7. Refresh to verify persistence, then sign out. Reopening the dashboard returns you to login.
@@ -43,15 +43,7 @@ Use a dedicated fictional-demo Firebase project. Enable Email/Password Authentic
 
 In `.env.local`, remove `FIREBASE_AUTH_EMULATOR_HOST` and `FIRESTORE_EMULATOR_HOST`, set `NEXT_PUBLIC_USE_EMULATORS=false`, and replace the public Firebase fields with your web app configuration. Set `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL` and `FIREBASE_PRIVATE_KEY` from a service account. Keep escaped `\n` characters in a quoted private key. Never put service account credentials in a `NEXT_PUBLIC_` variable or commit the downloaded JSON.
 
-Grant an existing user the server-verified staff claim:
-
-```bash
-npm run staff:grant -- FIREBASE_USER_UID
-# To revoke (also revokes refresh tokens):
-npm run staff:grant -- FIREBASE_USER_UID --revoke
-```
-
-Users must sign out and back in after a grant. The server checks ID tokens with revocation checking and requires `staff === true`. Merely creating a Firebase account does not grant staff access. Add your hosting domain to Firebase Auth’s authorized domains if you deploy. Rebuild after changing public configuration because Next.js embeds it in client assets.
+Every Firebase Authentication account is a staff member and can access the workspace after signing in. No custom claim or separate access grant is required. The server verifies ID tokens and checks for revocation on every protected request. To remove access, disable or delete the Firebase user. Add your hosting domain to Firebase Auth’s authorized domains if you deploy. Rebuild after changing public configuration because Next.js embeds it in client assets.
 
 Set `GEMINI_API_KEY` on the server and optionally change `GEMINI_MODEL` (default `gemini-3.6-flash`). Confirm model and quota availability in your account. Set `GEMINI_INPUT_USD_PER_MILLION`, `GEMINI_OUTPUT_USD_PER_MILLION` and `GEMINI_PRICING_NOTE` only after checking your selected model/tier. Blank rates produce **unknown cost**, not a claim that calls are free. A documented free tier can be represented with explicit zero rates and a note naming that assumption.
 
@@ -82,10 +74,10 @@ To use installed Chrome instead of a downloaded browser: `CHROME_PATH=/path/to/c
 | -------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | HTTP API       | `pages/api/jobs/`, `lib/validation.js`, `lib/errors.js`       | Required fields, strict numeric fees, 400/401/403/404/405/409 errors and transactional lifecycle checks       |
 | Database       | `lib/firebaseAdmin.js`, `lib/jobs.js`                         | Firestore jobs, server timestamps, transactional updates; integration reads records through API and Admin SDK |
-| Authentication | `pages/login.js`, `components/AuthProvider.js`, `lib/auth.js` | Firebase Email/Password; verified tokens and staff claim on every job/AI/PDF route                            |
+| Authentication | `pages/login.js`, `components/AuthProvider.js`, `lib/auth.js` | Firebase Email/Password; verified tokens on every job/AI/PDF route                            |
 | Reporting      | `pages/api/jobs/[id]/report.js`, `lib/report.js`              | Protected multi-page PDF using stored facts, explicit missing data and separate payment/collection states     |
 | LLM            | `pages/api/extract.js`, `lib/gemini.js`, `lib/extraction.js`  | Media validation, schema output validation, mandatory review, shared quota and Firestore usage log            |
 
-API summary: `GET/POST /api/jobs`, `GET /api/jobs/:id`, `PATCH /api/jobs/:id/status` (status, payment, fee, diagnosis or work done), `GET /api/jobs/:id/report`, `POST /api/extract`. All require `Authorization: Bearer <Firebase ID token>`. Lists return the latest 200 jobs. PDF timestamps are UTC. Standard PDF fonts replace unsupported Unicode characters with `?`; the original stored values remain intact.
+API summary: `GET/POST /api/jobs`, `GET /api/jobs/:id`, `PATCH /api/jobs/:id/status` (status, payment, customer name/phone, device, fault, fee, diagnosis or work done), `GET /api/jobs/:id/report`, `POST /api/extract`. All require `Authorization: Bearer <Firebase ID token>`. Lists return the latest 200 jobs. PDF timestamps are UTC. Standard PDF fonts replace unsupported Unicode characters with `?`; the original stored values remain intact.
 
 See [verification and milestone evidence](docs/Verification.md). Live Firebase/Gemini checks, public repository publication and portal submission remain external steps. No payments integration, public registration, customer portal or automatic message sending is included.

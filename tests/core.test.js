@@ -89,6 +89,37 @@ test("intake rejects extra properties, wrong shapes and invalid contact", () => 
     "+27820000000",
   );
 });
+test("job edits update customer, contact, device and fault with intake validation", () => {
+  const current = { status: "in_progress", paymentStatus: "unpaid" };
+  const details = {
+    customerName: "Updated Customer",
+    customerPhone: "+27820000000",
+    deviceModel: "Updated Phone",
+    faultDescription: "Battery failure",
+    diagnosis: "Faulty battery",
+    workDone: "Battery replaced",
+    fee: 250,
+  };
+  const { updatedAt, ...saved } = validateUpdate(details, current);
+  assert.deepEqual(saved, details);
+  assert.ok(updatedAt);
+  assert.equal(
+    validateUpdate({ customerPhone: "" }, current).customerPhone,
+    "",
+  );
+  for (const patch of [
+    { customerName: " " },
+    { deviceModel: "" },
+    { faultDescription: "" },
+    { customerPhone: "123" },
+    { customerName: 42 },
+    { deviceModel: "x".repeat(121) },
+    { faultDescription: "x".repeat(1001) },
+    { createdBy: "someone-else" },
+    { createdAt: new Date() },
+  ])
+    assert.throws(() => validateUpdate(patch, current));
+});
 test("repair completion requires recorded work and does not record payment", () => {
   assert.throws(() =>
     validateUpdate({ status: "ready_for_pickup" }, { status: "in_progress" }),
@@ -144,7 +175,7 @@ test("collection accepts explicit paid or waived status and retains timestamps",
     undefined,
   );
 });
-test("staff guard rejects missing, malformed, expired, revoked and non-staff tokens", async () => {
+test("staff guard rejects invalid sessions and accepts every verified account", async () => {
   for (const authorization of [undefined, "Basic abc", "Bearer a b"])
     await assert.rejects(requireStaff({ headers: { authorization } }), {
       status: 401,
@@ -160,22 +191,19 @@ test("staff guard rejects missing, malformed, expired, revoked and non-staff tok
       }),
       { status: 401 },
     );
-  await assert.rejects(
-    requireStaff({ headers: { authorization: "Bearer abc" } }, async () => ({
-      uid: "x",
-      staff: false,
-    })),
-    { status: 403 },
-  );
-  assert.equal(
-    (
+  for (const claims of [
+    { uid: "x" },
+    { uid: "x", staff: false },
+    { uid: "x", staff: true },
+  ]) {
+    assert.equal(
       await requireStaff(
         { headers: { authorization: "Bearer abc" } },
-        async () => ({ uid: "x", staff: true }),
-      )
-    ).uid,
-    "x",
-  );
+        async () => claims,
+      ),
+      claims,
+    );
+  }
 });
 test("every real API route rejects anonymous access before database or AI work", async () => {
   for (const [handler, method] of [

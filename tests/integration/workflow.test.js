@@ -57,16 +57,16 @@ test("Firebase + HTTP: authorization, persistent jobs, lifecycle, reports and AI
     401,
   );
   const auth = getAdminAuth();
-  const outsider = await auth.createUser({
-    email: `outsider-${Date.now()}@example.test`,
+  const account = await auth.createUser({
+    email: `account-${Date.now()}@example.test`,
     password: "TestOnly!2026",
   });
   let id, usageId;
   try {
-    const outsiderToken = await signIn(outsider.email, "TestOnly!2026");
+    const accountToken = await signIn(account.email, "TestOnly!2026");
     assert.equal(
-      (await request("/api/jobs", "GET", undefined, outsiderToken)).status,
-      403,
+      (await request("/api/jobs", "GET", undefined, accountToken)).status,
+      200,
     );
     assert.equal((await request("/api/jobs", "DELETE")).status, 405);
     assert.equal(
@@ -240,6 +240,6 @@ test("Firebase + HTTP: authorization, persistent jobs, lifecycle, reports and AI
   } finally {
     if (id) await getDb().collection("jobs").doc(id).delete();
     if (usageId) await getDb().collection("aiUsage").doc(usageId).delete();
-    await auth.deleteUser(outsider.uid);
+    await auth.deleteUser(account.uid);
   }
 });

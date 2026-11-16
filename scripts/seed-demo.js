@@ -38,7 +38,6 @@ if (process.argv.includes("--clean")) {
       displayName: "Demo Staff",
     });
   }
-  await auth.setCustomUserClaims("demo-staff", { staff: true });
   const now = Date.now(),
     hour = 3600000;
   const fixtures = [

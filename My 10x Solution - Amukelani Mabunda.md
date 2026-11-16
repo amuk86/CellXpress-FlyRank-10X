@@ -16,7 +16,7 @@ The scope has five features: staff sign-in, AI-assisted intake, repair tracking,
 
 1. **HTTP endpoints:** Next.js API routes create/list/retrieve jobs, validate updates and return clear errors. Invalid input, missing jobs and illegal lifecycle changes are rejected.
 2. **Database:** Firebase Firestore stores reviewed repair facts and timestamps. Transactions validate updates against the latest record, preventing concurrent requests from bypassing lifecycle rules.
-3. **Authentication:** Firebase Email/Password signs in manually provisioned staff. Every protected API verifies an ID token and requires the staff custom claim; hiding screens is not the security boundary.
+3. **Authentication:** Firebase Email/Password signs in manually provisioned staff. Every Firebase Authentication account has staff access, with no separate custom claim required. Every protected API verifies an ID token and checks for revocation.
 4. **Reporting:** A protected endpoint generates a downloadable PDF from a stored job, including customer/device, fault, diagnosis, work, fee, payment, progress and timestamps. Missing fields remain explicit; no diagnosis or price is invented.
 5. **LLM integration:** Gemini receives a photo and/or voice note behind the API. Structured output and server validation reject malformed facts. Missing and conflicting information is flagged, staff review is mandatory, and Firestore records usage with model, time, available tokens and explicitly configured cost assumptions. Raw media and keys are not logged.
 

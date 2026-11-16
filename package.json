@@ -10,7 +10,6 @@
     "emulators": "firebase emulators:start --project demo-cellxpress --only auth,firestore --import=.emulator-data --export-on-exit=.emulator-data",
     "seed": "node scripts/seed-demo.js",
     "seed:clean": "node scripts/seed-demo.js --clean",
-    "staff:grant": "node scripts/set-staff.js",
     "test:e2e": "playwright test",
     "test:integration": "node --test tests/integration/*.test.js",
     "format": "prettier --write components lib pages scripts styles tests *.js *.json *.md docs/*.md",
