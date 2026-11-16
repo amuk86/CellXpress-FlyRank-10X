@@ -1,6 +1,22 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { PDFDocument } from "pdf-lib";
+import { safeJson } from "../lib/apiResponse.js";
+
+test("Firebase Auth loads when the runtime disables require(esm)", () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      "--no-experimental-require-module",
+      "--input-type=module",
+      "-e",
+      'await import("firebase-admin/auth"); await import("./pages/api/jobs/index.js");',
+    ],
+    { cwd: new URL("..", import.meta.url), encoding: "utf8", timeout: 15000 },
+  );
+  assert.equal(result.status, 0, result.stderr || result.error?.message);
+});
 import { validateJob, validateUpdate } from "../lib/validation.js";
 import {
   validateExtraction,
@@ -429,5 +445,28 @@ test("prepared messages respect payment, unknown fee, phone format and ready sta
   assert.match(
     waLink({ ...job, customerPhone: "+447700900123" }),
     /wa.me\/447700900123/,
+  );
+});
+
+test("API responses preserve JSON errors and explain HTML platform errors", async () => {
+  assert.deepEqual(
+    await safeJson(
+      new Response(JSON.stringify({ error: "Invalid phone" }), { status: 400 }),
+    ),
+    { error: "Invalid phone" },
+  );
+  for (const status of [404, 500, 504]) {
+    await assert.rejects(
+      safeJson(
+        new Response("<!DOCTYPE html><p>Platform error</p>", { status }),
+      ),
+      (error) =>
+        error.message.includes(`HTTP ${status}`) &&
+        !error.message.includes("<!DOCTYPE"),
+    );
+  }
+  await assert.rejects(
+    safeJson(new Response("Request too large", { status: 413 })),
+    /too large/,
   );
 });

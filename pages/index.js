@@ -3,6 +3,7 @@ import Link from "next/link";
 import Header from "../components/Header.js";
 import { useAuth } from "../components/AuthProvider.js";
 import { waLink } from "../lib/messages.js";
+import { safeJson } from "../lib/apiResponse.js";
 const URGENT_AFTER_MS = 48 * 60 * 60 * 1000;
 function elapsed(ms) {
   if (ms == null) return "Time unknown";
@@ -236,7 +237,7 @@ export default function Dashboard() {
   const load = useCallback(async () => {
     try {
       const res = await apiFetch("/api/jobs");
-      const data = await res.json();
+      const data = await safeJson(res);
       if (!res.ok) throw new Error(data.error);
       setJobs(data.jobs);
       setError("");
@@ -259,7 +260,7 @@ export default function Dashboard() {
         method: "PATCH",
         body: JSON.stringify(fields),
       });
-      const data = await res.json();
+      const data = await safeJson(res);
       if (!res.ok) throw new Error(data.error);
       setJobs((prev) => prev.map((j) => (j.id === id ? data.job : j)));
       return true;
@@ -274,7 +275,7 @@ export default function Dashboard() {
     setBusy(job.id);
     try {
       const res = await apiFetch(`/api/jobs/${job.id}/report`);
-      if (!res.ok) throw new Error((await res.json()).error);
+      if (!res.ok) throw new Error((await safeJson(res)).error);
       const url = URL.createObjectURL(await res.blob());
       const a = document.createElement("a");
       a.href = url;

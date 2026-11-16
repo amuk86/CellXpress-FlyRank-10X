@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import Header from "../components/Header.js";
 import { useAuth } from "../components/AuthProvider.js";
 import { useRouter } from "next/router";
+import { safeJson } from "../lib/apiResponse.js";
 
 const CONFIDENCE_THRESHOLD = 0.6;
 
@@ -55,26 +56,6 @@ function blobToBase64(blob) {
     reader.onerror = reject;
     reader.readAsDataURL(blob);
   });
-}
-
-// If the server (or the platform in front of it) returns a non-JSON error
-// page - e.g. Vercel's own 413/500 for an oversized request - res.json()
-// throws a confusing "Unexpected token" error. This gives a readable message
-// instead, and still parses normally for well-formed JSON responses.
-async function safeJson(res) {
-  const text = await res.text();
-  try {
-    return JSON.parse(text);
-  } catch {
-    if (res.status === 413 || /request entity too large/i.test(text)) {
-      throw new Error(
-        "That photo/voice note is too large for the server to accept. Try a shorter recording or a smaller photo.",
-      );
-    }
-    throw new Error(
-      `Server returned an unexpected response (status ${res.status}). Check the Vercel function logs for details.`,
-    );
-  }
 }
 
 function ConfidenceBadge({ score }) {
@@ -355,8 +336,8 @@ export default function Intake() {
           )}
           <p className="muted">
             Media is sent to Gemini for extraction. Only reviewed job details
-            and usage metadata are stored. AI can make mistakes. Double-check all
-            extracted details before saving.
+            and usage metadata are stored. AI can make mistakes. Double-check
+            all extracted details before saving.
           </p>
         </section>
         <section className="intake-panel">
