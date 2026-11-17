@@ -1,12 +1,12 @@
 # CellXpress — FlyRank 10x one-pager
 
-Repair-shop staff capture device details, customer requests and prices across voice notes and handwritten records. Re-entering those facts takes time and makes it difficult to see what is repaired, paid and ready for collection. Creating a consistent repair report adds another repetitive task.
+This project began as a university assignment to find a business and solve one of its problems using an AI agent. The chosen business was an electronics repair shop at my university that used a handwritten book to record customers and required parts. The original agent listened to the technician and turned the repair details into a job record.
 
 ## People and intended improvement
 
 CellXpress technicians and counter staff need a staff-only repair operations workspace. This project extends the original **CellXpress Job Agent** supplied in `cellxpress-job-agent-main (1).zip`; it preserves its Next.js dashboard, photo/voice intake, Firestore storage and prepared WhatsApp links.
 
-**Target, not a measured result:** reduce capture and documentation time from several minutes to under a minute with AI-assisted intake and generated reports. To evaluate a 10x improvement, time the same fictional jobs manually and in the application, include review/correction and report creation, and compare median elapsed times. Record failures as well as successes; no speed claim is proven yet.
+**Practical value:** the shop has one operator and a low volume of customers, so the time-efficiency improvement over handwriting is modest. The main benefit is information that is easier to organize, find and update, with less reliance on a physical book that could be lost or damaged. A tenfold speed improvement remains an ambition, not a measured result. Future evaluation should assess record retrieval and management as well as timing the same fictional jobs manually and in the application, including review/correction and report creation.
 
 ## Five concepts and five product features
 

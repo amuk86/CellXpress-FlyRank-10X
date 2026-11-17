@@ -2,9 +2,11 @@
 
 ## Problem and intended improvement
 
-Repair-shop staff need to capture customer/device details, keep track of repairs, distinguish payment from collection, and produce a useful job report. Re-entering details from photos, voice notes and paper records creates avoidable work. CellXpress aims to reduce capture and documentation from several minutes to under a minute through AI-assisted intake and generated reports.
+This project began as an assignment for my university modules: find a business and solve one of its problems using an AI agent. I chose an electronics repair shop at my university, where the technician used a handwritten book to record customers and the parts needed for repairs. My original solution was an AI agent that could listen to the technician and create a job record with the details needed to complete the repair.
 
-**The 10x improvement is a target, not a measured claim.** Evaluation should time the same fictional jobs manually and with the application, including corrections and report generation, and compare median times. No benchmark result is claimed in this submission.
+The shop is run by one person and does not receive a high volume of customers, so the practical difference in time efficiency is modest. The strongest improvement is making repair information easier to organize, retrieve and update, and reducing reliance on a physical book that could be misplaced or damaged. The extended workspace also tracks repairs, separates payment from collection, and generates job reports.
+
+**The 10x improvement is an ambition, not a measured claim.** No benchmark result is claimed in this submission. Any future speed evaluation should time the same fictional jobs manually and with the application, including corrections and report generation, and compare median times. Evaluation should also consider how easily staff can find, update and retain repair information, since record management is the main benefit in this shop.
 
 ## Implementation
 

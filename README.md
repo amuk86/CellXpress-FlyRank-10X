@@ -4,6 +4,16 @@ A staff-only repair workspace extending the original **CellXpress Job Agent**, i
 
 The five features are staff sign-in, AI-assisted intake, repair tracking, PDF reports and prepared customer messages. The **10x time saving is a target, not a measured result**. See the [one-pager](docs/M1-One-Pager.md) and [submission overview](My%2010x%20Solution%20-%20Amukelani%20Mabunda.md).
 
+## Project background and practical value
+
+This project began as an assignment for my university modules: find a business, identify one of its problems, and build an AI agent to help solve it. I chose an electronics repair shop at my university. The shop used a handwritten book to record customers and the parts needed for repairs.
+
+My original solution was an AI agent that could listen to the technician describe a repair and turn that information into a job record containing the details needed to complete it. That idea became the CellXpress Job Agent, which this 10X version extends.
+
+In practice, the difference in time efficiency between the handwritten process and my solution is modest. The shop is run by one person and does not receive a high volume of customers, so faster intake has a limited effect on the working day. The main value is information management: digital job records are easier to organize, find and update, and less dependent on keeping track of a single physical book. They reduce the risk of losing repair information with a misplaced or damaged book, although digital records still need appropriate access controls and backups.
+
+For this shop, better record keeping is the strongest benefit. The 10X name describes an ambition for improvement; it does not establish a tenfold speed gain in this setting.
+
 ## Run locally without cloud credentials
 
 Requirements: Node.js 24 LTS, npm, and Java 21+ for the Firestore emulator. Ports 3000, 8080, 9099, 4400, 4500 and 9150 must be available. Initial installation and emulator download need internet access.
