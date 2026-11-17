@@ -6,7 +6,7 @@ This project began as an assignment for my university modules: find a business a
 
 The shop is run by one person and does not receive a high volume of customers, so the practical difference in time efficiency is modest. The strongest improvement is making repair information easier to organize, retrieve and update, and reducing reliance on a physical book that could be misplaced or damaged. The extended workspace also tracks repairs, separates payment from collection, and generates job reports.
 
-**The 10x improvement is an ambition, not a measured claim.** No benchmark result is claimed in this submission. Any future speed evaluation should time the same fictional jobs manually and with the application, including corrections and report generation, and compare median times. Evaluation should also consider how easily staff can find, update and retain repair information, since record management is the main benefit in this shop.
+**The biggest improvement is how repair information is managed.** My solution does not make a large difference to the time spent recording jobs because the shop is run by one person and does not get swamped with customers. Its value is that customer details, required parts and repair information are easier to find and update, and harder to lose than records kept in a handwritten book.
 
 ## Implementation
 
